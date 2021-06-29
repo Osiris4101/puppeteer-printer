@@ -1,0 +1,27 @@
+{
+  "name": "puppeteer-printer",
+  "version": "0.0.1",
+  "description": "A small library to print content from a url to pdf using Node.js & Puppeteer.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node example.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Osiris4101/puppeteer-printer.git"
+  },
+  "keywords": [
+    "'url to pdf",
+    "'Node.js'",
+    "'Puppeteer'"
+  ],
+  "author": "Muhammad Adil Umer",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Osiris4101/puppeteer-printer/issues"
+  },
+  "homepage": "https://github.com/Osiris4101/puppeteer-printer#readme",
+  "dependencies": {
+    "puppeteer": "^10.1.0"
+  }
+}
