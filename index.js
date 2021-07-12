@@ -9,13 +9,21 @@
 * like that for two reaseons,                                *
 *  1. I like to see where the program is, in execution cycle,*
 *     regardless of how tiny it is.                          *
-*  2. They currently serve the purpose of comments for the   *
-*     reader.                                                *
+*  2. They can also serve the purpose of comments for the    *
+*     reader. You might as well remove all the unnecessary   *
+*     logging in your production code.                       *
 *************************************************************/
 
 
 var puppeteer = require('puppeteer');
+var path = require('path');
+var fs = require('fs');
 
+var printFormats = {
+  pdf: 'pdf',
+  png: 'png',
+  mhtml: 'mhtml'
+}
 /* 
 As I plan to use it in a server-side app which would always be active,
 I declare this variable to prevent constantly opening and closing the 
@@ -103,7 +111,7 @@ async function checkBrowser(logs){
     }
     return true;
   }else{
-    // Nothing to do here, as browser diconnection would lead to relaunch, still leaving it here if something comes to mind in the next few releases.
+    return true;
   }
 }
 
@@ -114,8 +122,22 @@ async function setDisconnectEvent(browser){
   });
 }
 
+async function saveMHTML(page, outFile){
+
+  try{
+    
+    var cdp = await page.target().createCDPSession();
+    var { data } = await cdp.send('Page.captureSnapshot', { format: printFormats.mhtml });
+    await fs.writeFileSync(outFile, data);
+
+  } catch (err) {
+    console.log(err); 
+  }
+
+}
+
 async function printPage(options){
-  
+
   var isBrowserActive = await checkBrowser(options.logs);
   if (!isBrowserActive) return null;
   
@@ -152,22 +174,37 @@ async function printPage(options){
   
   if(options.logs) console.log('Printing', options.output ,'...');
 
-  await page.pdf({
-    path: options.output,
-    landscape: options.landscape || false,
-    scale: options.scale || 1,
-    printBackground: options.printBackground == false ? false : true,
-    margin: options.margin || { top: '0px', right: '0px', bottom: '0px', left: '0px'},
-    width: viewport.width,
-    height: dims.content.h*1.18 + "px"
-  });
+  var fmt = options.printFormat ? options.printFormat.toLowerCase() : printFormats.png;
+  if (!(fmt in printFormats)) fmt = printFormats.png;
+  var outFile = path.join(__dirname, options.output.substr(options.output.lastIndexOf('.') + 1).toLowerCase() == fmt ? options.output : `${options.output}.${fmt}`);
+  console.log(outFile, fmt)
+  switch(fmt){
+    default:
+    case printFormats.png:
+      await page.screenshot({path: outFile, fullPage: true});
+      break;
+    case printFormats.pdf:
+      await page.pdf({
+        path: outFile,
+        landscape: options.landscape || false,
+        scale: options.scale || 1,
+        printBackground: options.printBackground == false ? false : true,
+        margin: options.margin || { top: '0px', right: '0px', bottom: '0px', left: '0px'},
+        width: viewport.width,
+        height: dims.content.h*1.18 + "px"
+      });
+      break;
+    case printFormats.mhtml:
+      await saveMHTML(page, outFile);
+      break;
+  }
 
-  if(!waitingURLPrintingTask){
+  if(!waitingURLPrintingTask && activeBrowser != null){
     if(options.logs) console.log('No waiting tasks, closing browser instance...');
     await activeBrowser.close();
   }
 
-  return options.output;
+  return outFile;
 }
 
 module.exports = {
